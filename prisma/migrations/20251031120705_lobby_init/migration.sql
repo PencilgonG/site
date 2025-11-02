@@ -1,0 +1,1 @@
+-- placeholder for 20251031120705_lobby_init (already applied in DB)
