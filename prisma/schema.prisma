@@ -4,149 +4,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // ex: ...neon.tech/neondb?sslmode=require&schema=myg
 }
 
-model Lobby {
-  id               String             @id
-  guildId          String
-  channelId        String
-  messageId        String
-  name             String
-  teams            Int
-  status           LobbyStatus        @default(WAITING)
-  createdBy        String
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime
-  format           LobbyFormat?
-  LobbyParticipant LobbyParticipant[]
-  Match            Match[]
-  Team             Team[]
-}
-
-model LobbyParticipant {
-  id         String      @id
-  lobbyId    String
-  discordId  String?
-  display    String
-  role       Role
-  isFake     Boolean     @default(false)
-  joinedAt   DateTime    @default(now())
-  Lobby      Lobby       @relation(fields: [lobbyId], references: [id])
-  TeamMember TeamMember?
-
-  @@unique([lobbyId, discordId])
-  @@index([lobbyId, role])
-}
-
-model Match {
-  id                            String       @id
-  lobbyId                       String
-  teamAId                       String
-  teamBId                       String
-  round                         Int
-  state                         MatchState   @default(PENDING)
-  draftRoomId                   String?
-  blueUrl                       String?
-  redUrl                        String?
-  specUrl                       String?
-  createdAt                     DateTime     @default(now())
-  updatedAt                     DateTime
-  winnerTeamId                  String?
-  Lobby                         Lobby        @relation(fields: [lobbyId], references: [id])
-  Team_Match_teamAIdToTeam      Team         @relation("Match_teamAIdToTeam", fields: [teamAId], references: [id])
-  Team_Match_teamBIdToTeam      Team         @relation("Match_teamBIdToTeam", fields: [teamBId], references: [id])
-  Team_Match_winnerTeamIdToTeam Team?        @relation("Match_winnerTeamIdToTeam", fields: [winnerTeamId], references: [id])
-  MatchResult                   MatchResult?
-
-  @@index([lobbyId, round])
-}
-
-model MatchResult {
-  id        String   @id
-  matchId   String   @unique
-  winnerId  String
-  loserId   String
-  createdAt DateTime @default(now())
-  Match     Match    @relation(fields: [matchId], references: [id])
-}
-
-model MvpVote {
-  id             String   @id
-  lobbyId        String
-  matchId        String
-  teamId         String
-  voterDiscordId String
-  votedDiscordId String
-  createdAt      DateTime @default(now())
-
-  @@unique([matchId, teamId, voterDiscordId])
-  @@index([lobbyId])
-}
-
-model PointsLedger {
-  id        String   @id
-  discordId String
-  matchId   String
-  points    Int
-  reason    String
-  createdAt DateTime @default(now())
-
-  @@index([discordId])
-  @@index([matchId])
-}
-
-model Team {
-  id                             String       @id
-  lobbyId                        String
-  name                           String
-  captainId                      String?
-  createdAt                      DateTime     @default(now())
-  updatedAt                      DateTime
-  Match_Match_teamAIdToTeam      Match[]      @relation("Match_teamAIdToTeam")
-  Match_Match_teamBIdToTeam      Match[]      @relation("Match_teamBIdToTeam")
-  Match_Match_winnerTeamIdToTeam Match[]      @relation("Match_winnerTeamIdToTeam")
-  Lobby                          Lobby        @relation(fields: [lobbyId], references: [id])
-  TeamMember                     TeamMember[]
-}
-
-model TeamMember {
-  id                 String           @id
-  teamId             String
-  lobbyParticipantId String           @unique
-  assignedAt         DateTime         @default(now())
-  LobbyParticipant   LobbyParticipant @relation(fields: [lobbyParticipantId], references: [id])
-  Team               Team             @relation(fields: [teamId], references: [id])
-
-  @@unique([teamId, lobbyParticipantId])
-}
-
-model UserProfile {
-  discordId     String   @id
-  summonerName  String?
-  elo           Elo?
-  mainRole      Role?
-  secondaryRole Role?
-  opggUrl       String?
-  dpmUrl        String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime
-}
-
-model InhouseEvent {
-  id          String   @id @default(cuid())
-  title       String
-  startAt     DateTime
-  mode        String?
-  maxPlayers  Int?
-  description String?
-  isOpen      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([startAt])
-}
-
+/* ===== Enums partagés ===== */
 enum Elo {
   IRON
   BRONZE
@@ -160,13 +21,13 @@ enum Elo {
   CHALLENGER
 }
 
-enum LobbyFormat {
-  BO1
-  BO3
-  BO5
-  RR1
-  RR2
-  RR3
+enum Role {
+  TOP
+  JGL
+  MID
+  ADC
+  SUPP
+  SUB
 }
 
 enum LobbyStatus {
@@ -182,15 +43,159 @@ enum MatchState {
   CANCELLED
 }
 
-enum Role {
-  TOP
-  JGL
-  MID
-  ADC
-  SUPP
-  SUB
+enum LobbyFormat {
+  BO1
+  BO3
+  BO5
+  RR1
+  RR2
+  RR3
 }
 
+/* ===== Modèles partagés bot/site ===== */
+model UserProfile {
+  discordId     String   @id
+  summonerName  String?
+  elo           Elo?
+  mainRole      Role?
+  secondaryRole Role?
+  opggUrl       String?
+  dpmUrl        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Lobby {
+  id        String      @id @default(cuid())
+  guildId   String
+  channelId String
+  messageId String
+  name      String
+  teams     Int
+  status    LobbyStatus @default(WAITING)
+  createdBy String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  format    LobbyFormat?
+
+  participants LobbyParticipant[]
+  teamsList    Team[]
+  matches      Match[]
+}
+
+model LobbyParticipant {
+  id        String   @id @default(cuid())
+  lobbyId   String
+  discordId String?
+  display   String
+  role      Role
+  isFake    Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+
+  lobby      Lobby       @relation(fields: [lobbyId], references: [id])
+  teamMember TeamMember?
+
+  @@unique([lobbyId, discordId])
+  @@index([lobbyId, role])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  lobbyId   String
+  name      String
+  captainId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lobby   Lobby        @relation(fields: [lobbyId], references: [id])
+  members TeamMember[]
+
+  matchesAsA Match[] @relation("TeamA")
+  matchesAsB Match[] @relation("TeamB")
+  winnersOf  Match[] @relation("WinnerTeam")
+}
+
+model TeamMember {
+  id                 String   @id @default(cuid())
+  teamId             String
+  lobbyParticipantId String   @unique
+  assignedAt         DateTime @default(now())
+
+  team        Team             @relation(fields: [teamId], references: [id])
+  participant LobbyParticipant @relation(fields: [lobbyParticipantId], references: [id])
+
+  @@unique([teamId, lobbyParticipantId])
+}
+
+model Match {
+  id           String     @id @default(cuid())
+  lobbyId      String
+  teamAId      String
+  teamBId      String
+  round        Int
+  state        MatchState @default(PENDING)
+
+  draftRoomId  String?
+  blueUrl      String?
+  redUrl       String?
+  specUrl      String?
+
+  announcedAt  DateTime?  // idempotence guard
+
+  winnerTeamId String?
+  winner       Team?      @relation("WinnerTeam", fields: [winnerTeamId], references: [id])
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  lobby  Lobby @relation(fields: [lobbyId], references: [id])
+  teamA  Team  @relation("TeamA", fields: [teamAId], references: [id])
+  teamB  Team  @relation("TeamB", fields: [teamBId], references: [id])
+
+  // 1–1 optionnelle avec MatchResult
+  result MatchResult?
+
+  @@index([lobbyId, round])
+  @@index([lobbyId, round, state])
+  @@unique([lobbyId, round, teamAId, teamBId])
+}
+
+model MatchResult {
+  id        String   @id @default(cuid())
+  matchId   String   @unique
+  winnerId  String
+  loserId   String
+  createdAt DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+}
+
+model MvpVote {
+  id             String   @id @default(cuid())
+  lobbyId        String
+  matchId        String
+  teamId         String
+  voterDiscordId String
+  votedDiscordId String
+  createdAt      DateTime @default(now())
+
+  @@unique([matchId, teamId, voterDiscordId])
+  @@index([lobbyId])
+}
+
+model PointsLedger {
+  id        String   @id @default(cuid())
+  discordId String
+  matchId   String
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([discordId])
+  @@index([matchId])
+}
+
+/* ===== Modèles “site” (peuvent rester ici sans gêner le bot) ===== */
 model FaqItem {
   id        String   @id @default(cuid())
   order     Int      @default(0)
@@ -200,3 +205,16 @@ model FaqItem {
   updatedAt DateTime @updatedAt
 }
 
+model InhouseEvent {
+  id          String   @id @default(cuid())
+  title       String
+  startAt     DateTime
+  mode        String?
+  maxPlayers  Int?
+  description String?
+  isOpen      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([startAt])
+}
