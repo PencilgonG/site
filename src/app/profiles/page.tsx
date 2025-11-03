@@ -5,6 +5,9 @@ import { Navbar } from "@/components/Navbar";
 import { ProfileBubble } from "@/components/ProfileBubble";
 import ProfileModal from "@/components/ProfileModal";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type DbRole = "TOP" | "JGL" | "MID" | "ADC" | "SUPP" | "SUB";
 type UiRole = "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT" | "SUB";
 const toUiRole = (r?: DbRole | null): UiRole =>
@@ -33,7 +36,8 @@ export default function ProfilesPage() {
   const load = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/profiles", { cache: "no-store" });
+      // On ajoute un timestamp pour forcer le bypass cache CDN
+      const res = await fetch(`/api/profiles?ts=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       setItems(data.profiles ?? []);
     } finally {
@@ -57,9 +61,7 @@ export default function ProfilesPage() {
     for (const p of items) g[toUiRole(p.mainRole)].push(p);
     for (const r of ROLES) {
       g[r].sort((a, b) =>
-        (a.summonerName || a.discordId).localeCompare(
-          b.summonerName || b.discordId
-        )
+        (a.summonerName || a.discordId).localeCompare(b.summonerName || b.discordId)
       );
     }
     return g;
@@ -93,8 +95,7 @@ export default function ProfilesPage() {
                 {grouped[role].length ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {grouped[role].map((p) => {
-                      const name =
-                        p.summonerName || `#${p.discordId.slice(-4)}`;
+                      const name = p.summonerName || `#${p.discordId.slice(-4)}`;
                       return (
                         <ProfileBubble
                           key={p.discordId}
