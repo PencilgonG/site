@@ -37,10 +37,9 @@ body {
 }
 
 /* =========================================================
-   HERO (Option 2) – fond propre, lisible, sans canvas
+   HERO – fond propre, lisible
    =========================================================*/
 
-/* bords sombres doux pour focaliser le regard au centre */
 .hero-vignette {
   background:
     radial-gradient(1200px 580px at 50% 55%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.5) 100%),
@@ -48,7 +47,6 @@ body {
   mix-blend-mode: multiply;
 }
 
-/* halo clair subtil sur les marches au centre */
 .hero-spot {
   background:
     radial-gradient(700px 380px at 50% 58%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0) 70%);
@@ -56,66 +54,7 @@ body {
   opacity: 0.9;
 }
 
-/* lissage de la bannière (évite les bords visibles) */
-.hero-banner-smooth {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  will-change: transform, opacity;
-}
-
-/* légère brume en bas (si besoin pour détacher les widgets) */
-.haze-bottom {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 28vh;
-  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0.9));
-  pointer-events: none;
-}
-
-/* =========================================================
-   (Ancien) Effet vent – conservé désactivé par défaut.
-   Si tu veux réactiver: entoure ton hero d’une classe .wind-soft/.wind-strong
-   =========================================================*/
-.wind-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.wind-layer::before,
-.wind-layer::after {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  background-image:
-    repeating-linear-gradient(-12deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 12px),
-    radial-gradient(1200px 500px at 20% 40%, rgba(255,255,255,0.05), transparent 60%),
-    radial-gradient(900px 400px at 80% 60%, rgba(255,255,255,0.04), transparent 60%);
-  filter: blur(1.2px);
-  transform: translateZ(0);
-  animation: windMove 22s linear infinite;
-  mix-blend-mode: screen;
-  opacity: 0.25;
-}
-.wind-layer::after {
-  animation-duration: 34s;
-  animation-direction: reverse;
-  opacity: 0.18;
-  filter: blur(2px);
-}
-@keyframes windMove {
-  from { transform: translate3d(-14%, 0, 0) skewX(-6deg); }
-  to   { transform: translate3d(14%, 0, 0)  skewX(-6deg); }
-}
-.wind-strong .wind-layer::before { opacity: 0.35; }
-.wind-strong .wind-layer::after  { opacity: 0.28; }
-.wind-soft   .wind-layer::before { opacity: 0.18; }
-.wind-soft   .wind-layer::after  { opacity: 0.12; }
-
-/* --- Amélioration du contraste du hero --- */
+/* --- Contraste du hero renforcé --- */
 .hero-vignette-strong {
   background:
     radial-gradient(1100px 520px at 50% 55%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%),
@@ -130,26 +69,12 @@ body {
   opacity: 1;
 }
 
-/* --- Contraste du hero (déjà ajouté précédemment) --- */
-.hero-vignette-strong {
-  background:
-    radial-gradient(1100px 520px at 50% 55%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%),
-    radial-gradient(900px 460px at 50% 60%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.45) 100%);
-  mix-blend-mode: multiply;
-}
-
-.hero-spot-strong {
-  background:
-    radial-gradient(700px 380px at 50% 58%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0) 70%);
-  mix-blend-mode: screen;
-  opacity: 1;
-}
-
-/* --- Bannière : antialias & glow subtil --- */
+/* lissage de la bannière */
 .hero-banner-smooth {
   image-rendering: -webkit-optimize-contrast;
   -webkit-font-smoothing: antialiased;
 }
+
 .hero-banner-glow {
   position: absolute;
   width: min(36vw, 650px);
@@ -162,16 +87,22 @@ body {
   opacity: .85;
 }
 
+/* Haze bas pour adoucir la jonction vers les widgets */
+.haze-bottom {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 28vh;
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0.9));
+  pointer-events: none;
+}
+
 /* ===============================
    Brume animée (3 couches)
-   - Sans assets, via gradients + blur
    =============================== */
-
 .fog {
   position: absolute;
   inset: -8%;
   background:
-    /* texture douce */
     radial-gradient(1200px 600px at 50% 60%, rgba(255,255,255,0.09), transparent 60%),
     radial-gradient(900px 420px at 20% 70%, rgba(255,255,255,0.06), transparent 60%),
     radial-gradient(800px 380px at 80% 35%, rgba(255,255,255,0.05), transparent 60%);
@@ -181,79 +112,40 @@ body {
   opacity: .28;
   animation: fogDriftX 90s linear infinite, fogPulse 18s ease-in-out infinite;
 }
-
 .fog-back  { opacity: .18; filter: blur(16px); animation-duration: 120s, 26s; transform: translateZ(0) scale(1.05); }
 .fog-mid   { opacity: .26; filter: blur(12px);  animation-duration: 90s, 22s;  transform: translateZ(0) scale(1.03); }
 .fog-front { opacity: .32; filter: blur(10px);  animation-duration: 70s, 18s;  transform: translateZ(0) scale(1.01); }
 
 @keyframes fogDriftX {
   from { transform: translate3d(-6%, 0, 0) scale(1.03); }
-  to   { transform: translate3d( 6%, 0, 0)  scale(1.03); }
+  to   { transform: translate3d( 6%, 0, 0) scale(1.03); }
 }
-
 @keyframes fogPulse {
   0%, 100% { opacity: var(--fog-o, 0.28); }
   50%      { opacity: calc(var(--fog-o, 0.28) + 0.06); }
 }
 
-/* (optionnel) si tu veux encore adoucir : */
-/* .fog-front { opacity: .28 } */
-
-/* --- Curseur League of Legends (par défaut partout) --- */
-/* Mets le curseur dans /public/assets/lol-cursor.png */
-html, body, * {
-  cursor: url("/assets/lol-cursor.png") 6 2, default; /* hot-spot x y à ajuster si besoin */
-}
-
-/* Curseur "cliquable" (liens, boutons) – si tu as une variante pointer, remplace par /assets/lol-cursor-pointer.png */
+/* Curseur League of Legends */
+html, body, * { cursor: url("/assets/lol-cursor.png") 6 2, default; }
 a, button, [role="button"], .is-clickable {
   cursor: url("/assets/lol-cursor.png") 6 2, pointer;
 }
 
-/* --- Tuiles hover (gifs/vidéos) --- */
-.myg-hover-tile {
-  position: relative;
-  overflow: hidden;
-  border-radius: 1rem;          /* rounded-2xl */
-  border: 1px solid rgba(255,255,255,0.1);
-  aspect-ratio: 16 / 9;         /* s’adapte bien aux GIFs */
-  background: #0b0b0c;          /* évite tout flash noir */
-}
-
-/* Poster statique (visible par défaut) */
-.myg-hover-tile .poster {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  transition: opacity .25s ease;
-}
-
-/* Layer GIF (img) – caché tant qu’on ne survole pas */
-.myg-hover-tile .gif {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity .25s ease;
-}
-
-/* Layer VIDEO (si .gifv/.mp4) – idem */
-.myg-hover-tile video.preview {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity .25s ease;
-}
-
-/* Survol : on cache le poster et on montre l’anim */
-.myg-hover-tile:hover .poster { opacity: 0; }
+/* Tuiles hover (si utilisées ailleurs) */
+.myg-hover-tile { position: relative; overflow: hidden; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.1); aspect-ratio: 16 / 9; background:#0b0b0c; }
+.myg-hover-tile .poster { position: absolute; inset: 0; width:100%; height:100%; object-fit:cover; transition: opacity .25s ease; }
+.myg-hover-tile .gif { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity .25s ease; }
+.myg-hover-tile video.preview { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity .25s ease; }
+.myg-hover-tile:hover .poster { opacity:0; }
 .myg-hover-tile:hover .gif,
-.myg-hover-tile:hover video.preview { opacity: 1; }
+.myg-hover-tile:hover video.preview { opacity:1; }
+.myg-hover-tile .label { position:absolute; left:0; right:0; bottom:0; padding:1rem 1.25rem; background:linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0)); }
 
-/* Dégradé de lecture en bas + textes */
-.myg-hover-tile .label {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  padding: 1rem 1.25rem;
-  background: linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0));
+/* Animation flèche scroll discrète */
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(6px); }
+}
+.animate-bounce-slow {
+  animation: bounce-slow 1.8s ease-in-out infinite;
 }

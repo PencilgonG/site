@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type FaqItem = {
   id: string;
@@ -14,15 +14,8 @@ type FaqItem = {
 export default function FaqPage() {
   const [items, setItems] = useState<FaqItem[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
-
-  // Admin
   const [adminToken, setAdminToken] = useState<string>("");
-  const isAdmin = useMemo(() => !!adminToken, [adminToken]);
-
-  useEffect(() => {
-    const t = localStorage.getItem("myg_admin_token") || "";
-    setAdminToken(t);
-  }, []);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -82,29 +75,50 @@ export default function FaqPage() {
     setItems((prev) => prev.filter((it) => it.id !== id));
   }
 
+  // Déconnexion complète (efface token)
+  function handleAdminOff() {
+    setAdminToken("");
+    setIsAdmin(false);
+  }
+
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8 text-white">
-      <div className="flex items-center gap-3 mb-6">
+    <main className="mx-auto max-w-3xl px-4 py-8 text-white">
+      <div className="mb-6 flex items-center gap-3">
         <h1 className="text-3xl font-semibold">FAQ</h1>
-        {/* Admin token */}
+
         <div className="ml-auto flex items-center gap-2">
-          <input
-            type="password"
-            className="px-3 py-2 rounded bg-black/40 border border-white/15 text-sm"
-            placeholder="ADMIN_TOKEN"
-            defaultValue={adminToken}
-            onChange={(e) => {
-              const v = e.target.value.trim();
-              setAdminToken(v);
-              localStorage.setItem("myg_admin_token", v);
-            }}
-          />
-          <span className="text-xs opacity-70">{isAdmin ? "Admin ON" : "Admin OFF"}</span>
+          {!isAdmin ? (
+            <>
+              <input
+                type="password"
+                className="rounded border border-white/15 bg-black/40 px-3 py-2 text-sm"
+                placeholder="ADMIN_TOKEN"
+                value={adminToken}
+                onChange={(e) => setAdminToken(e.target.value.trim())}
+              />
+              <button
+                onClick={() => {
+                  if (!adminToken) return alert("Entrez un token admin");
+                  setIsAdmin(true);
+                }}
+                className="rounded border border-emerald-400/40 bg-emerald-400/10 px-2 py-1 text-sm text-emerald-300 hover:bg-emerald-500/10"
+              >
+                Admin ON
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleAdminOff}
+              className="rounded border border-red-400/40 bg-red-400/10 px-2 py-1 text-sm text-red-300 hover:bg-red-400/20"
+            >
+              Admin OFF
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Accordéon */}
-      <div className="divide-y divide-white/10 rounded-xl border border-white/10 bg-white/5">
+      {/* Liste FAQ */}
+      <div className="divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-white/5">
         {items.sort(byOrder).map((it) => (
           <ItemRow
             key={it.id}
@@ -161,7 +175,7 @@ function ItemRow({
     <div className="overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full text-left p-4 hover:bg-white/5 flex items-start gap-3"
+        className="flex w-full items-start gap-3 p-4 text-left hover:bg-white/5"
         aria-expanded={open}
       >
         <span className="mt-1 select-none">{open ? "▾" : "▸"}</span>
@@ -173,7 +187,7 @@ function ItemRow({
                 e.stopPropagation();
                 setEditing(true);
               }}
-              className="text-xs rounded px-2 py-1 border border-white/15 hover:bg-white/10"
+              className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
             >
               Éditer
             </button>
@@ -182,7 +196,7 @@ function ItemRow({
                 e.stopPropagation();
                 onRemove(item.id);
               }}
-              className="text-xs rounded px-2 py-1 border border-red-400/40 text-red-300 hover:bg-red-500/10"
+              className="rounded border border-red-400/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
             >
               Supprimer
             </button>
@@ -190,29 +204,31 @@ function ItemRow({
         )}
       </button>
 
-      {/* Contenu déroulant */}
       <div
-        className="px-5 pb-4 transition-[max-height] duration-300 ease-in-out"
+        className={`transition-[max-height,opacity,padding] duration-300 ease-in-out ${
+          open ? "opacity-100 px-5 pb-4" : "max-h-0 overflow-hidden px-5 pb-0 opacity-0"
+        }`}
         style={{ maxHeight: open ? 1000 : 0 }}
+        aria-hidden={!open}
       >
         {!editing ? (
-          <div className="opacity-90 leading-relaxed whitespace-pre-wrap">{item.answer}</div>
+          <div className="whitespace-pre-wrap leading-relaxed opacity-90">{item.answer}</div>
         ) : (
           <div className="space-y-3">
             <input
-              className="w-full px-3 py-2 rounded bg-black/40 border border-white/15"
+              className="w-full rounded border border-white/15 bg-black/40 px-3 py-2"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <textarea
-              className="w-full px-3 py-2 rounded bg-black/40 border border-white/15 min-h-[120px]"
+              className="min-h-[120px] w-full rounded border border-white/15 bg-black/40 px-3 py-2"
               value={a}
               onChange={(e) => setA(e.target.value)}
             />
             <div className="flex items-center gap-3">
-              <label className="opacity-70 text-sm">Ordre</label>
+              <label className="text-sm opacity-70">Ordre</label>
               <input
-                className="w-20 px-2 py-1 rounded bg-black/40 border border-white/15 text-sm"
+                className="w-20 rounded border border-white/15 bg-black/40 px-2 py-1 text-sm"
                 value={ord}
                 onChange={(e) => setOrd(e.target.value)}
               />
@@ -227,13 +243,13 @@ function ItemRow({
                   } as any);
                   setEditing(false);
                 }}
-                className="px-3 py-1.5 rounded border border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/10 text-sm"
+                className="rounded border border-emerald-400/40 px-3 py-1.5 text-sm text-emerald-300 hover:bg-emerald-500/10"
               >
                 Enregistrer
               </button>
               <button
                 onClick={() => setEditing(false)}
-                className="px-3 py-1.5 rounded border border-white/15 hover:bg-white/10 text-sm"
+                className="rounded border border-white/15 px-3 py-1.5 text-sm hover:bg-white/10"
               >
                 Annuler
               </button>
@@ -248,17 +264,18 @@ function ItemRow({
 function CreateRow({ onCreate }: { onCreate: (q: string, a: string) => void }) {
   const [q, setQ] = useState("");
   const [a, setA] = useState("");
+
   return (
-    <div className="mt-6 p-4 rounded-xl border border-white/10 bg-white/5 space-y-3">
-      <div className="font-medium mb-1">Ajouter une question</div>
+    <div className="mt-6 space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="mb-1 font-medium">Ajouter une question</div>
       <input
-        className="w-full px-3 py-2 rounded bg-black/40 border border-white/15"
+        className="w-full rounded border border-white/15 bg-black/40 px-3 py-2"
         placeholder="Question…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
       <textarea
-        className="w-full px-3 py-2 rounded bg-black/40 border border-white/15 min-h-[120px]"
+        className="min-h-[120px] w-full rounded border border-white/15 bg-black/40 px-3 py-2"
         placeholder="Réponse…"
         value={a}
         onChange={(e) => setA(e.target.value)}
@@ -270,7 +287,7 @@ function CreateRow({ onCreate }: { onCreate: (q: string, a: string) => void }) {
           setQ("");
           setA("");
         }}
-        className="px-3 py-1.5 rounded border border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/10 text-sm"
+        className="rounded border border-emerald-400/40 px-3 py-1.5 text-sm text-emerald-300 hover:bg-emerald-500/10"
       >
         Ajouter
       </button>
