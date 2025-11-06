@@ -2,7 +2,11 @@
 // Résolution d’avatar Discord avec cache mémoire, backoff 429, et fallback propre.
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+// Accepte les deux noms d'ENV pour compatibilité (Vercel/locaux)
+const BOT_TOKEN =
+  process.env.DISCORD_BOT_TOKEN ||
+  process.env.DISCORD_TOKEN ||
+  "";
 const DEBUG = process.env.DEBUG_AVATAR === "true";
 
 // TTL pour une PP résolue (ms)
@@ -17,6 +21,13 @@ type CacheEntry = {
 
 const avatarCache = new Map<string, CacheEntry>();
 let nextAllowedFetchAt = 0;
+
+/** Optionnel: pour forcer un reset (ex: après un gros batch de updates) */
+export function clearAvatarCache() {
+  avatarCache.clear();
+  nextAllowedFetchAt = 0;
+  if (DEBUG) console.log("[avatar] cache cleared");
+}
 
 /** Fallback déterministe (0..5) si on ne peut pas résoudre via l’API */
 function fallbackUrlFromId(id: string): string {
@@ -70,13 +81,21 @@ export async function resolveAvatarUrl(userId: string): Promise<string> {
 
   // 2) Backoff global (si Discord nous a limité récemment)
   if (now < nextAllowedFetchAt) {
-    if (DEBUG) console.warn(`[avatar] in backoff until ${new Date(nextAllowedFetchAt).toISOString()} — serve fallback/cache for ${userId}`);
+    if (DEBUG)
+      console.warn(
+        `[avatar] in backoff until ${new Date(
+          nextAllowedFetchAt
+        ).toISOString()} — serve fallback/cache for ${userId}`
+      );
     return cached?.url ?? fallbackUrlFromId(userId);
   }
 
   // 3) Préconditions
   if (!GUILD_ID || !BOT_TOKEN) {
-    if (DEBUG) console.warn(`[avatar] missing GUILD_ID or BOT_TOKEN — fallback for ${userId}`);
+    if (DEBUG)
+      console.warn(
+        `[avatar] missing GUILD_ID or BOT_TOKEN — fallback for ${userId}`
+      );
     return fallbackUrlFromId(userId);
   }
 
@@ -92,7 +111,10 @@ export async function resolveAvatarUrl(userId: string): Promise<string> {
     if (res.status === 429 || res.status >= 500) {
       // Rate-limit ou erreur serveur Discord: on active un backoff
       nextAllowedFetchAt = Date.now() + BACKOFF_MS;
-      if (DEBUG) console.warn(`[avatar] Discord ${res.status} — backoff ${BACKOFF_MS / 1000}s`);
+      if (DEBUG)
+        console.warn(
+          `[avatar] Discord ${res.status} — backoff ${BACKOFF_MS / 1000}s`
+        );
       return cached?.url ?? fallbackUrlFromId(userId);
     }
 
@@ -106,14 +128,15 @@ export async function resolveAvatarUrl(userId: string): Promise<string> {
 
     const data = await res.json();
 
-    const memberAvatar = data?.avatar ?? null;     // guild-specific
+    const memberAvatar = data?.avatar ?? null; // guild-specific
     const userAvatar = data?.user?.avatar ?? null; // global
-    const url = buildAvatarUrl({
-      userId,
-      guildId: GUILD_ID,
-      memberAvatar,
-      userAvatar,
-    }) ?? fallbackUrlFromId(userId);
+    const url =
+      buildAvatarUrl({
+        userId,
+        guildId: GUILD_ID,
+        memberAvatar,
+        userAvatar,
+      }) ?? fallbackUrlFromId(userId);
 
     // 5) Cache
     avatarCache.set(userId, { url, expiresAt: now + AVATAR_TTL });
