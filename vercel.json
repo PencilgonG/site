@@ -1,18 +1,13 @@
+cat > vercel.json <<'JSON'
 {
-  "regions": ["cdg1"],
-
   "headers": [
     {
-      "source": "/_next/static/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
-    },
-    {
-      "source": "/(.*)\\.(?:webp|png|jpg|jpeg|gif|svg|ico|css|js)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
-    },
-    {
-      "source": "/api/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+      "source": "/api/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
     }
-  ]
+  ],
+  "regions": ["cdg1"]
 }
+JSON
