@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { mutate as swrMutate } from "swr";
 
 type RoleDb = "TOP" | "JGL" | "MID" | "ADC" | "SUPP" | "SUB";
 type RoleUi = "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT" | "SUB";
@@ -31,6 +33,8 @@ export default function ProfileModal({
   onClose: () => void;
   onSaved?: () => void;
 }) {
+  const router = useRouter();
+
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -62,8 +66,11 @@ export default function ProfileModal({
     try {
       setSaving(true);
       const res = await fetch(`/api/profiles/${profile.discordId}`, {
-        method: "PUT", // édition ouverte
+        method: "PUT",
         headers: { "content-type": "application/json" },
+        cache: "no-store",
+        // Par sécurité côté Next 14/16 (selon conf), on peut aussi indiquer:
+        // next: { revalidate: 0 }
         body: JSON.stringify({
           summonerName: form.summonerName || null,
           elo: form.elo || null,
@@ -73,10 +80,17 @@ export default function ProfileModal({
           dpmUrl: form.dpmUrl || null,
         }),
       });
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e.error || `HTTP ${res.status}`);
+      const json = await res.json().catch(() => ({} as any));
+      if (!res.ok || json?.error) {
+        throw new Error(json?.error || `HTTP ${res.status}`);
       }
+
+      // 1) Re-fetch immédiat de la liste des profils (SWR)
+      await swrMutate("/api/profiles");
+
+      // 2) Refresh App Router (au cas où la page utilise des Server Components)
+      router.refresh();
+
       setEditing(false);
       onSaved?.();
     } catch (e: any) {
@@ -123,14 +137,14 @@ export default function ProfileModal({
                 <button
                   disabled={saving}
                   onClick={save}
-                  className="px-3 py-1.5 rounded border border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/10 text-sm"
+                  className="px-3 py-1.5 rounded border border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/10 text-sm disabled:opacity-60"
                 >
-                  💾 Enregistrer
+                  {saving ? "Sauvegarde..." : "💾 Enregistrer"}
                 </button>
                 <button
                   disabled={saving}
                   onClick={() => setEditing(false)}
-                  className="px-3 py-1.5 rounded border border-white/15 hover:bg-white/10 text-sm"
+                  className="px-3 py-1.5 rounded border border-white/15 hover:bg-white/10 text-sm disabled:opacity-60"
                 >
                   Annuler
                 </button>
