@@ -9,23 +9,24 @@ export function ProfileBubble({
   role,
   avatar,
   discordId,
-  points = 0,        // NEW
+  points = 0,
   onClick,
 }: {
   name: string;
   role: UiRole;
-  avatar?: string;    // si fourni, on l'utilise tel quel
-  discordId?: string; // si fourni, on tente de récupérer la vraie PP Discord
-  points?: number;    // NEW: pour afficher le badge
+  avatar?: string;
+  discordId?: string;
+  points?: number;
   onClick?: () => void;
 }) {
-  // Fallback déterministe (si pas d'avatar/discordId)
   const fallbackFromId = (id?: string) => {
-    let idx = 0;
-    if (id) {
-      try { idx = Number(BigInt(id) % 6n); } catch { idx = 0; }
+    if (!id) return "/default-avatar.png";
+    try {
+      const idx = Number(BigInt(id) % 6n);
+      return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+    } catch {
+      return "/default-avatar.png";
     }
-    return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
   };
 
   const [imgSrc, setImgSrc] = useState<string>(avatar || fallbackFromId(discordId));
@@ -41,7 +42,9 @@ export function ProfileBubble({
     let aborted = false;
     (async () => {
       try {
-        const r = await fetch(`/api/discord/avatar/${discordId}`, { cache: "force-cache" });
+        // ⬇️ IMPORTANT: ne pas forcer le cache (CDN/browser),
+        // on veut refléter les updates immédiatement
+        const r = await fetch(`/api/discord/avatar/${discordId}`, { cache: "no-store" });
         const j = await r.json();
         if (!aborted && j?.url) setImgSrc(j.url);
       } catch {
@@ -58,16 +61,16 @@ export function ProfileBubble({
     MID: "bg-indigo-500/20 border-indigo-400/30 text-indigo-100",
     ADC: "bg-amber-500/20 border-amber-400/30 text-amber-100",
     SUPPORT: "bg-cyan-500/20 border-cyan-400/30 text-cyan-100",
-    SUB: "bg-white/10 border-white/20 text-white/80",
+    SUB: "bg-zinc-500/20 border-zinc-400/30 text-zinc-100",
   };
 
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center gap-2 p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:scale-[1.03] transition"
-      aria-label={`Ouvrir le profil de ${name}`}
+      className="group flex flex-col items-center gap-2 p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition"
+      title={name}
     >
-      <div className="relative w-20 h-20">
+      <div className="relative w-16 h-16">
         <Image
           src={imgSrc}
           alt={name}
@@ -76,8 +79,6 @@ export function ProfileBubble({
           className="rounded-full object-cover border border-white/20"
           onError={() => setImgSrc(fallbackFromId(discordId))}
         />
-
-        {/* NEW — Badge points (discret) */}
         {typeof points === "number" && points !== 0 && (
           <span className="absolute -bottom-1 -right-1 text-[10px] px-1.5 py-0.5 rounded bg-black/70 border border-white/20">
             {points} pts

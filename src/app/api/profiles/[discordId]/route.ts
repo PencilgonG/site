@@ -7,6 +7,9 @@ import {
   sanitizeElo,
 } from "@/lib/validate";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 type PutBody = {
   summonerName?: unknown;
   elo?: unknown;
@@ -16,17 +19,10 @@ type PutBody = {
   dpmUrl?: unknown;
 };
 
-// Next 16: params est un Promise
-type Ctx = { params: Promise<{ discordId: string }> };
+type Ctx = { params: { discordId: string } };
 
-// --- Utils ---
-function isValidSnowflake(idRaw?: string | null): idRaw is string {
-  if (!idRaw) return false;
-  const id = idRaw.trim();
-  try {
-    const n = BigInt(id);
-    if (n > 0n) return true;
-  } catch {}
+function isValidSnowflake(id?: string) {
+  if (!id) return false;
   return /^\d{5,30}$/.test(id);
 }
 
@@ -35,6 +31,9 @@ function withHeaders(json: any, status = 200) {
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store, no-cache, must-revalidate, max-age=0",
+      pragma: "no-cache",
+      expires: "0",
       "x-route-version": "profiles-put-v3-partial",
     },
   });
@@ -45,15 +44,15 @@ function maybeSet<T extends object, K extends keyof T>(
   target: T,
   body: Record<string, unknown>,
   key: K,
-  value: T[K]
+  value: unknown
 ) {
-  if (Object.prototype.hasOwnProperty.call(body, key)) {
-    // la clé était dans le JSON -> on applique (même si value = null)
-    target[key] = value;
+  if (Object.prototype.hasOwnProperty.call(body, key as string)) {
+    // @ts-expect-error - assign checked at runtime
+    target[key] = value as T[K];
   }
 }
 
-// --- GET (optionnel) ---
+// --- GET (profil individuel) ---
 export async function GET(_req: Request, ctx: Ctx) {
   const { discordId: raw } = await ctx.params;
   const id = raw?.trim();
@@ -93,31 +92,26 @@ export async function PUT(req: Request, ctx: Ctx) {
     elo: sanitizeElo(body.elo),
     mainRole: sanitizeRoleDb(body.mainRole),
     secondaryRole: sanitizeRoleDb(body.secondaryRole),
-    opggUrl: sanitizeUrl(body.opggUrl),
-    dpmUrl: sanitizeUrl(body.dpmUrl),
+    opggUrl: sanitizeUrl(body.opggUrl, 200),
+    dpmUrl: sanitizeUrl(body.dpmUrl, 200),
   };
 
-  // Données pour UPDATE (partial): n’ajoute que les clés présentes
-  const updateData: any = { updatedAt: new Date() };
-  maybeSet(updateData, body as any, "summonerName", sanitized.summonerName);
-  maybeSet(updateData, body as any, "elo", sanitized.elo);
-  maybeSet(updateData, body as any, "mainRole", sanitized.mainRole);
-  maybeSet(updateData, body as any, "secondaryRole", sanitized.secondaryRole);
-  maybeSet(updateData, body as any, "opggUrl", sanitized.opggUrl);
-  maybeSet(updateData, body as any, "dpmUrl", sanitized.dpmUrl);
+  const createData: any = { discordId: id };
+  const updateData: any = {};
 
-  // Données pour CREATE (complètes)
-  const createData = {
-    discordId: id,
-    summonerName: sanitized.summonerName ?? null,
-    elo: sanitized.elo ?? null,
-    mainRole: sanitized.mainRole ?? null,
-    secondaryRole: sanitized.secondaryRole ?? null,
-    opggUrl: sanitized.opggUrl ?? null,
-    dpmUrl: sanitized.dpmUrl ?? null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+  maybeSet(createData, body, "summonerName", sanitized.summonerName);
+  maybeSet(createData, body, "elo", sanitized.elo);
+  maybeSet(createData, body, "mainRole", sanitized.mainRole);
+  maybeSet(createData, body, "secondaryRole", sanitized.secondaryRole);
+  maybeSet(createData, body, "opggUrl", sanitized.opggUrl);
+  maybeSet(createData, body, "dpmUrl", sanitized.dpmUrl);
+
+  maybeSet(updateData, body, "summonerName", sanitized.summonerName);
+  maybeSet(updateData, body, "elo", sanitized.elo);
+  maybeSet(updateData, body, "mainRole", sanitized.mainRole);
+  maybeSet(updateData, body, "secondaryRole", sanitized.secondaryRole);
+  maybeSet(updateData, body, "opggUrl", sanitized.opggUrl);
+  maybeSet(updateData, body, "dpmUrl", sanitized.dpmUrl);
 
   try {
     const saved = await prisma.userProfile.upsert({
